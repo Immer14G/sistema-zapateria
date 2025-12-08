@@ -1,58 +1,23 @@
 <?php
-require_once './config/database.php';
+require_once './models/Movimiento.php';
 
-class Movimiento {
+class MovimientoController {
 
-    // Registrar encabezado de factura
-    public static function registrarFactura($factura_id, $total, $usuario_id) {
-        global $conexion;
+    public function index() {
+        // Seguridad: bloquear acceso si NO hay sesión
+        if (!isset($_SESSION['user'])) {
+            header("Location: index.php?c=auth&a=login");
+            exit();
+        }
 
-        $descripcion = "Factura #$factura_id registrada por $$total";
+        // Solo admin puede ver movimientos
+        if ($_SESSION['user']['rol'] !== 'admin') {
+            echo "<h3 style='color:red;text-align:center'>Acceso denegado</h3>";
+            exit();
+        }
 
-        $stmt = $conexion->prepare("
-            INSERT INTO movimientos (tipo, descripcion, factura_id, usuario_id, fecha)
-            VALUES ('factura', ?, ?, ?, NOW())
-        ");
-        $stmt->execute([$descripcion, $factura_id, $usuario_id]);
-    }
-
-    // Registrar movimiento por producto vendido
-    public static function registrarProductoVendido($factura_id, $producto_id, $nombre_producto, $cantidad, $precio_venta, $ganancia, $usuario_id) {
-        global $conexion;
-
-        $descripcion = "Producto vendido: $nombre_producto";
-
-        $stmt = $conexion->prepare("
-            INSERT INTO movimientos 
-            (tipo, factura_id, producto_id, descripcion, cantidad, precio_venta, ganancia, usuario_id, fecha)
-            VALUES 
-            ('venta', ?, ?, ?, ?, ?, ?, ?, NOW())
-        ");
-
-        $stmt->execute([
-            $factura_id,
-            $producto_id,
-            $descripcion,
-            $cantidad,
-            $precio_venta,
-            $ganancia,
-            $usuario_id
-        ]);
-    }
-
-    // Obtener movimientos agrupados por factura
-    public static function getAll() {
-        global $conexion;
-
-        $stmt = $conexion->query("
-            SELECT m.*, p.nombre AS producto, u.nombre AS usuario
-            FROM movimientos m
-            LEFT JOIN productos p ON m.producto_id = p.id
-            LEFT JOIN usuarios u ON m.usuario_id = u.id
-            ORDER BY factura_id DESC, fecha ASC
-        ");
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $movimientos = Movimiento::getAll();
+        require './views/movimientos/index.php';
     }
 }
 ?>
