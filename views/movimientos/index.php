@@ -9,7 +9,12 @@
 <body class="bg-light">
 
 <div class="container mt-4">
+
     <h3 class="mb-4 fw-bold">📄 Movimientos del Sistema</h3>
+
+    <a href="index.php?c=movimiento&a=pdf" class="btn btn-danger mb-3">
+        Descargar PDF
+    </a>
 
     <table class="table table-bordered table-striped table-hover">
         <thead class="table-dark">
@@ -23,6 +28,7 @@
                 <th>Ganancia</th>
                 <th>Usuario</th>
                 <th>Fecha</th>
+                <th>Ticket</th>
             </tr>
         </thead>
 
@@ -38,11 +44,27 @@
                     <td><?= $m['ganancia'] ? '$'.number_format($m['ganancia'], 2) : '-' ?></td>
                     <td><?= $m['usuario'] ?: '-' ?></td>
                     <td><?= $m['fecha'] ?></td>
+
+                    <!-- BOTÓN DE TICKET SOLO SI ES UNA VENTA -->
+                    <td>
+                        <?php if ($m['tipo'] === 'venta'): ?>
+                            <a href="index.php?c=movimiento&a=pdfProducto&id=<?= $m['id'] ?>"
+                               target="_blank"
+                               class="btn btn-sm btn-primary">
+                                Ticket
+                            </a>
+                        <?php else: ?>
+                            -
+                        <?php endif; ?>
+                    </td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
+
+    <a href="index.php?c=home&a=index" class="btn btn-secondary">Volver</a>
+
 </div>
-  <a href="index.php?c=home&a=index" class="btn btn-secondary">Volver</a>
+
 </body>
 </html>

@@ -4,13 +4,11 @@ require_once './models/Movimiento.php';
 class MovimientoController {
 
     public function index() {
-        // Seguridad: bloquear acceso si NO hay sesión
         if (!isset($_SESSION['user'])) {
             header("Location: index.php?c=auth&a=login");
             exit();
         }
 
-        // Solo admin puede ver movimientos
         if ($_SESSION['user']['rol'] !== 'admin') {
             echo "<h3 style='color:red;text-align:center'>Acceso denegado</h3>";
             exit();
@@ -18,6 +16,47 @@ class MovimientoController {
 
         $movimientos = Movimiento::getAll();
         require './views/movimientos/index.php';
+    }
+
+
+    public function pdfProducto() {
+        if (!isset($_SESSION['user'])) {
+            header("Location: index.php?c=auth&a=login");
+            exit();
+        }
+
+        if ($_SESSION['user']['rol'] !== 'admin') {
+            echo "<h3 style='color:red;text-align:center'>Acceso denegado</h3>";
+            exit();
+        }
+
+        if (!isset($_GET['id'])) {
+            die("ID de movimiento no recibido");
+        }
+
+        $id = $_GET['id'];
+        $mov = Movimiento::getById($id);
+
+        if (!$mov) {
+            die("Movimiento no encontrado.");
+        }
+
+        require './vendor/autoload.php';
+
+        $options = new Dompdf\Options();
+        $options->set('isRemoteEnabled', true);
+
+        $dompdf = new Dompdf\Dompdf($options);
+
+        ob_start();
+        require './views/movimientos/ticket.php';
+        $html = ob_get_clean();
+
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper([0, 0, 220, 600]);
+        $dompdf->render();
+
+        $dompdf->stream("ticket_producto.pdf", ["Attachment" => true]);
     }
 }
 ?>

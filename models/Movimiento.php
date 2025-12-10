@@ -16,7 +16,7 @@ class Movimiento {
         $stmt->execute([$tipo, $descripcion, $usuario_id]);
     }
 
-    // Registrar factura
+    // Registrar factura completa
     public static function registrarFactura($factura_id, $total, $usuario_id) {
         global $conexion;
 
@@ -29,17 +29,20 @@ class Movimiento {
         $stmt->execute([$descripcion, $factura_id, $usuario_id]);
     }
 
-    // Registrar producto vendido
+    // Registrar producto vendido con ganancia correcta
     public static function registrarProductoVendido(
         $factura_id,
         $producto_id,
         $nombre_producto,
         $cantidad,
         $precio_venta,
-        $ganancia,
+        $costo_unitario,
         $usuario_id
     ) {
         global $conexion;
+
+        // GANANCIA = (precio venta - costo) * cantidad
+        $ganancia = ($precio_venta - $costo_unitario) * $cantidad;
 
         $descripcion = "Producto vendido: $nombre_producto";
 
@@ -60,7 +63,7 @@ class Movimiento {
         ]);
     }
 
-    // Obtener movimientos ordenados
+    // Obtener movimientos
     public static function getAll() {
         global $conexion;
 
@@ -76,6 +79,25 @@ class Movimiento {
         ");
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Obtener un movimiento por ID (para ticket individual)
+    public static function getById($id) {
+        global $conexion;
+
+        $stmt = $conexion->prepare("
+            SELECT 
+                m.*, 
+                p.nombre AS producto, 
+                u.nombre AS usuario
+            FROM movimientos m
+            LEFT JOIN productos p ON m.producto_id = p.id
+            LEFT JOIN usuarios u ON m.usuario_id = u.id
+            WHERE m.id = ?
+        ");
+
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }
 ?>
