@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <title>Productos</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+.img-producto {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 5px;
+}
+</style>
 </head>
 <body>
 <div class="container mt-4">
@@ -29,6 +37,7 @@
         <thead>
             <tr>
                 <th>ID</th>
+                <th>Imagen</th>
                 <th>Nombre</th>
                 <th>Categoria</th>
                 <th>Proveedor</th>
@@ -41,6 +50,13 @@
         <?php foreach($productos as $p): ?>
             <tr>
                 <td><?= $p['id'] ?></td>
+                <td>
+                    <?php if(!empty($p['imagen']) && file_exists($p['imagen'])): ?>
+                        <img src="<?= $p['imagen'] ?>" class="img-producto">
+                    <?php else: ?>
+                        <img src="assets/img/productos/default.png" class="img-producto">
+                    <?php endif; ?>
+                </td>
                 <td><?= htmlspecialchars($p['nombre']) ?></td>
                 <td><?= htmlspecialchars($p['categoria']) ?></td>
                 <td><?= htmlspecialchars($p['proveedor']) ?></td>

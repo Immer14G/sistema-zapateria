@@ -11,27 +11,21 @@ class ProductoController {
 
     public function index() {
         if (!isset($_SESSION['user'])) header('Location: index.php?c=auth&a=login');
-
         $q = isset($_GET['q']) ? trim($_GET['q']) : '';
-
         global $conexion;
         if ($q) {
-            // Busca coincidencias en nombre, categoría o proveedor
             $stmt = $conexion->prepare("
                 SELECT p.*, c.nombre AS categoria, pr.nombre AS proveedor
                 FROM productos p
                 LEFT JOIN categorias c ON p.categoria_id = c.id
                 LEFT JOIN proveedores pr ON p.proveedor_id = pr.id
-                WHERE p.nombre LIKE :busqueda
-                   OR c.nombre LIKE :busqueda
-                   OR pr.nombre LIKE :busqueda
+                WHERE p.nombre LIKE :busqueda OR c.nombre LIKE :busqueda OR pr.nombre LIKE :busqueda
             ");
             $stmt->execute(['busqueda' => "%$q%"]);
             $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
             $productos = Producto::getAll();
         }
-
         require 'views/productos/index.php';
     }
 
@@ -44,16 +38,33 @@ class ProductoController {
 
     public function store() {
         $this->soloAdmin();
+        $nombre = trim($_POST['nombre']);
+
+        if (Producto::exists($nombre)) {
+            $_SESSION['error'] = "El producto '$nombre' ya existe";
+            header('Location: index.php?c=producto&a=create');
+            exit;
+        }
+
+        $imagenNombre = 'default.png';
+        if (!empty($_FILES['imagen']['name'])) {
+            $ext = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
+            $imagenNombre = 'producto_' . time() . '.' . $ext;
+            move_uploaded_file($_FILES['imagen']['tmp_name'], 'assets/img/productos/' . $imagenNombre);
+        }
+
         $data = [
-            'nombre'=>$_POST['nombre'],
-            'categoria_id'=>$_POST['categoria_id'],
-            'proveedor_id'=>$_POST['proveedor_id'],
-            'precio_compra'=>$_POST['precio_compra'],
-            'precio_venta'=>$_POST['precio_venta'],
-            'stock'=>$_POST['stock']
+            'nombre'=> $nombre,
+            'categoria_id'=> $_POST['categoria_id'],
+            'proveedor_id'=> $_POST['proveedor_id'],
+            'precio_compra'=> $_POST['precio_compra'],
+            'precio_venta'=> $_POST['precio_venta'],
+            'stock'=> $_POST['stock'],
+            'imagen'=> $imagenNombre
         ];
+
         Producto::create($data);
-        Movimiento::registrar('crear_producto', "Se creó el producto: {$data['nombre']}"); 
+        Movimiento::registrar('crear_producto', "Se creó el producto: {$nombre}");
         header('Location: index.php?c=producto&a=index');
     }
 
@@ -64,20 +75,38 @@ class ProductoController {
         $producto = Producto::find($id);
         $categorias = Producto::getCategorias();
         $proveedores = Producto::getProveedores();
-        require 'views/productos/edit.php';
+        require 'views/productos/form.php';
     }
 
     public function update() {
         $this->soloAdmin();
         $id = $_POST['id'];
+        $producto = Producto::find($id);
+
+        $nombre = trim($_POST['nombre']);
+        if ($nombre != $producto['nombre'] && Producto::exists($nombre)) {
+            $_SESSION['error'] = "El producto '$nombre' ya existe";
+            header("Location: index.php?c=producto&a=edit&id=$id");
+            exit;
+        }
+
+        $imagenNombre = $producto['imagen'] ?: 'default.png';
+        if (!empty($_FILES['imagen']['name'])) {
+            $ext = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
+            $imagenNombre = 'producto_' . time() . '.' . $ext;
+            move_uploaded_file($_FILES['imagen']['tmp_name'], 'assets/img/productos/' . $imagenNombre);
+        }
+
         $data = [
-            'nombre'=>$_POST['nombre'],
-            'categoria_id'=>$_POST['categoria_id'],
-            'proveedor_id'=>$_POST['proveedor_id'],
-            'precio_compra'=>$_POST['precio_compra'],
-            'precio_venta'=>$_POST['precio_venta'],
-            'stock'=>$_POST['stock']
+            'nombre'=> $nombre,
+            'categoria_id'=> $_POST['categoria_id'],
+            'proveedor_id'=> $_POST['proveedor_id'],
+            'precio_compra'=> $_POST['precio_compra'],
+            'precio_venta'=> $_POST['precio_venta'],
+            'stock'=> $_POST['stock'],
+            'imagen'=> $imagenNombre
         ];
+
         Producto::update($id, $data);
         Movimiento::registrar('editar_producto', "Se editó el producto ID $id");
         header('Location: index.php?c=producto&a=index');
