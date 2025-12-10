@@ -10,7 +10,7 @@
 <div class="container mt-4">
     <h3>Nueva venta</h3>
 
-    <form method="POST" action="index.php?c=venta&a=store">
+    <form method="POST" action="index.php?c=venta&a=store" onsubmit="return validateStock()">
 
         <table class="table table-bordered">
             <thead class="table-dark">
@@ -25,7 +25,6 @@
 
             <tbody id="rows">
                 <tr>
-                    <!-- PRODUCTO -->
                     <td>
                         <select name="producto_id[]" class="form-control producto-select" onchange="updatePrice(this)" required>
                             <option value="">-- Seleccione --</option>
@@ -35,6 +34,8 @@
                                     value="<?= $p['id'] ?>"
                                     data-costo="<?= $p['precio_compra'] ?>"
                                     data-precio="<?= $p['precio_venta'] ?>"
+                                    data-stock="<?= $p['stock'] ?>"
+                                    <?= $p['stock'] == 0 ? 'disabled style="color:red"' : '' ?>
                                 >
                                     <?= $p['nombre'] ?> (Stock: <?= $p['stock'] ?>)
                                 </option>
@@ -43,22 +44,18 @@
                         </select>
                     </td>
 
-                    <!-- COSTO (SOLO LECTURA) -->
                     <td>
                         <input type="number" name="costo[]" class="form-control costo" readonly>
                     </td>
 
-                    <!-- PRECIO VENTA (EDITABLE) -->
                     <td>
                         <input type="number" name="precio_venta[]" class="form-control precio" min="0" step="0.01" required>
                     </td>
 
-                    <!-- CANTIDAD -->
                     <td>
                         <input type="number" name="cantidad[]" class="form-control cantidad" min="1" value="1" required>
                     </td>
 
-                    <!-- ELIMINAR FILA -->
                     <td>
                         <button type="button" class="btn btn-danger" onclick="removeRow(this)">X</button>
                     </td>
@@ -66,7 +63,6 @@
             </tbody>
         </table>
 
-        <!-- Botones -->
         <button type="button" class="btn btn-primary" onclick="addRow()">Agregar producto</button>
         <button class="btn btn-success">Registrar venta</button>
         <a href="index.php?c=home&a=index" class="btn btn-secondary">Regresar</a>
@@ -77,31 +73,53 @@
 <script>
 function updatePrice(select) {
     const option = select.options[select.selectedIndex];
-
     const costo = option.dataset.costo;
     const precio = option.dataset.precio;
+    const stock = parseInt(option.dataset.stock);
 
     const row = select.closest('tr');
-
     row.querySelector(".costo").value = costo;
     row.querySelector(".precio").value = precio;
+
+    const cantidadInput = row.querySelector(".cantidad");
+    if(stock === 0){
+        cantidadInput.value = 0;
+        cantidadInput.disabled = true;
+        alert('Este producto no tiene stock y no se puede vender.');
+    } else {
+        cantidadInput.disabled = false;
+        if(cantidadInput.value == 0) cantidadInput.value = 1;
+    }
 }
 
 function addRow() {
     const row = document.querySelector('#rows tr').cloneNode(true);
-
-    // limpiar valores de la fila nueva
     row.querySelector(".producto-select").value = "";
     row.querySelector(".costo").value = "";
     row.querySelector(".precio").value = "";
     row.querySelector(".cantidad").value = 1;
-
+    row.querySelector(".cantidad").disabled = false;
     document.getElementById('rows').appendChild(row);
 }
 
 function removeRow(btn) {
     const totalRows = document.querySelectorAll('#rows tr').length;
     if (totalRows > 1) btn.closest('tr').remove();
+}
+
+function validateStock() {
+    const rows = document.querySelectorAll('#rows tr');
+    for(const row of rows){
+        const select = row.querySelector('.producto-select');
+        const cantidad = parseInt(row.querySelector('.cantidad').value);
+        const stock = parseInt(select.options[select.selectedIndex].dataset.stock);
+
+        if(stock === 0 || cantidad > stock){
+            alert(`No se puede vender el producto "${select.options[select.selectedIndex].text}" por falta de stock.`);
+            return false;
+        }
+    }
+    return true;
 }
 </script>
 

@@ -1,5 +1,9 @@
 <?php
 require_once './models/Movimiento.php';
+require_once './vendor/autoload.php';
+
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class MovimientoController {
 
@@ -18,35 +22,15 @@ class MovimientoController {
         require './views/movimientos/index.php';
     }
 
-
     public function pdfProducto() {
-        if (!isset($_SESSION['user'])) {
-            header("Location: index.php?c=auth&a=login");
-            exit();
-        }
+        if (!isset($_GET['id'])) die("ID no recibido");
 
-        if ($_SESSION['user']['rol'] !== 'admin') {
-            echo "<h3 style='color:red;text-align:center'>Acceso denegado</h3>";
-            exit();
-        }
+        $mov = Movimiento::getById($_GET['id']);
+        if (!$mov) die("Movimiento no encontrado.");
 
-        if (!isset($_GET['id'])) {
-            die("ID de movimiento no recibido");
-        }
-
-        $id = $_GET['id'];
-        $mov = Movimiento::getById($id);
-
-        if (!$mov) {
-            die("Movimiento no encontrado.");
-        }
-
-        require './vendor/autoload.php';
-
-        $options = new Dompdf\Options();
+        $options = new Options();
         $options->set('isRemoteEnabled', true);
-
-        $dompdf = new Dompdf\Dompdf($options);
+        $dompdf = new Dompdf($options);
 
         ob_start();
         require './views/movimientos/ticket.php';

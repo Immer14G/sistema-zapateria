@@ -43,12 +43,26 @@ class Producto {
             $id
         ]);
     }
+public static function delete($id) {
+    global $conexion;
 
-    public static function delete($id) {
-        global $conexion;
-        $stmt = $conexion->prepare('DELETE FROM productos WHERE id=?');
-        $stmt->execute([$id]);
+    try {
+        $conexion->beginTransaction();
+
+        // 1. Borrar movimientos relacionados
+        $stmtMov = $conexion->prepare('DELETE FROM movimientos WHERE producto_id = ?');
+        $stmtMov->execute([$id]);
+
+        // 2. Borrar el producto
+        $stmtProd = $conexion->prepare('DELETE FROM productos WHERE id = ?');
+        $stmtProd->execute([$id]);
+
+        $conexion->commit();
+    } catch (PDOException $e) {
+        $conexion->rollBack();
+        throw new Exception("No se pudo eliminar el producto: " . $e->getMessage());
     }
+}
 
     public static function decreaseStock($id, $qty) {
         global $conexion;

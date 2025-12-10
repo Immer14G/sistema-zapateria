@@ -11,7 +11,27 @@ class ProductoController {
 
     public function index() {
         if (!isset($_SESSION['user'])) header('Location: index.php?c=auth&a=login');
-        $productos = Producto::getAll();
+
+        $q = isset($_GET['q']) ? trim($_GET['q']) : '';
+
+        global $conexion;
+        if ($q) {
+            // Busca coincidencias en nombre, categoría o proveedor
+            $stmt = $conexion->prepare("
+                SELECT p.*, c.nombre AS categoria, pr.nombre AS proveedor
+                FROM productos p
+                LEFT JOIN categorias c ON p.categoria_id = c.id
+                LEFT JOIN proveedores pr ON p.proveedor_id = pr.id
+                WHERE p.nombre LIKE :busqueda
+                   OR c.nombre LIKE :busqueda
+                   OR pr.nombre LIKE :busqueda
+            ");
+            $stmt->execute(['busqueda' => "%$q%"]);
+            $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $productos = Producto::getAll();
+        }
+
         require 'views/productos/index.php';
     }
 

@@ -33,55 +33,53 @@ class VentaController {
 
         $usuario_id = $_SESSION['user']['id'];
 
-        // Se reciben arrays
-        $productos = $_POST['producto_id'];
+        $productos  = $_POST['producto_id'];
         $cantidades = $_POST['cantidad'];
 
-        // Crear la venta vacía
         $ventaId = Venta::crearVentaBase($usuario_id);
 
-        $totalVenta = 0;
+        $totalVenta   = 0;
         $gananciaVenta = 0;
 
         foreach ($productos as $i => $producto_id) {
+
             if (!$producto_id) continue;
 
             $cantidad = (int)$cantidades[$i];
             $producto = Producto::find($producto_id);
 
             if (!$producto) continue;
-            if ($producto['stock'] < $cantidad) continue;
+
+            // 🔹 VALIDACIÓN: si el stock es 0, no se puede vender
+            if ($producto['stock'] <= 0) {
+                continue; // o puedes mostrar un mensaje de advertencia
+            }
 
             $precio = $producto['precio_venta'];
             $costo  = $producto['precio_compra'];
 
-            $total = $precio * $cantidad;
+            $total    = $precio * $cantidad;
             $ganancia = ($precio - $costo) * $cantidad;
 
-            // Registrar detalle
             Venta::agregarDetalle($ventaId, $producto_id, $cantidad, $precio);
 
-            // Descontar stock
+            // Reducir stock
             Producto::decreaseStock($producto_id, $cantidad);
 
-            // Registrar movimiento del producto
+            // Registrar movimiento
             Movimiento::registrarProductoVendido(
-                $ventaId,  // factura_id REAL
                 $producto_id,
-                $producto['nombre'],
                 $cantidad,
                 $precio,
-                $ganancia,
                 $usuario_id
             );
 
-            // Acumular totales
-            $totalVenta += $total;
+            $totalVenta   += $total;
             $gananciaVenta += $ganancia;
         }
 
-        // Registrar movimiento principal (encabezado factura)
-        Movimiento::registrarFactura($ventaId, $totalVenta, $usuario_id);
+        // Actualizar totales de la venta
+        Venta::actualizarTotales($ventaId, $totalVenta, $gananciaVenta);
 
         header('Location: index.php?c=venta&a=create');
     }
